@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nessus-safe-install"
+version = "0.1.0"
+description = "Data-preserving installation and guarded native updates for Tenable Nessus"
+requires-python = ">=3.12"
+license = "MIT"
+readme = "README.md"
+authors = [{name = "MiRHaDi"}]
+classifiers = ["Development Status :: 3 - Alpha", "Operating System :: POSIX :: Linux", "Programming Language :: Python :: 3"]
+
+[project.scripts]
+nessus-safe = "nessus_safe.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["nessus_safe*"]

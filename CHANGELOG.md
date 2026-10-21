@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-10-22
+
+- Identify the official-package smoke-test downloader with its actual application User-Agent and binary Accept header. A same-network check changed from HTTP 403 / Cloudflare 1010 with the default Python client to HTTP 200 with a Debian archive response.
+- Report bounded HTTP/Cloudflare error codes without exposing response bodies, cookies, client IP addresses or signed URLs. Retain the exact official catalog URL and SHA-256 verification.
+
 ## 0.2.0 — 2026-10-22
 
 - Add read-only `versions` discovery using exact official catalog URLs and published package checksums; do not synthesize download routes.

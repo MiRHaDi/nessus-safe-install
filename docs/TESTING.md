@@ -1,6 +1,6 @@
 # Validation and release status
 
-Version 0.2.0 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+Version 0.2.1 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
 
 ## Version 0.2.0 review
 
@@ -14,7 +14,11 @@ The `versions` command has also been exercised against the live official catalog
 
 The disposable-runner test was dispatched against the official Ubuntu 10.12.5 package and published SHA-256. Both the explicit version route and the exact canonical URL returned by the vendor catalog received HTTP 403 from the runner. The installation step therefore **did not execute**; this is not a passed installation or upgrade test. No alternate mirror, license bypass or success-by-skipping was introduced. [Canonical-route run](https://github.com/MiRHaDi/nessus-safe-install/actions/runs/39687775561).
 
-The next trigger for that integration gate is approved access to the official package from the test environment. The installer also accepts a locally supplied verified package; the hosted workflow does not upload or redistribute one. Licensed engine upgrades and online delivery remain unverified until legitimate registration is available in an isolated test environment.
+### Version 0.2.1 download diagnosis
+
+A bounded check of the same official URL on the same network returned HTTP 403 with `error code: 1010` for the default Python client. Identifying the application honestly in `User-Agent` and requesting `application/octet-stream` returned HTTP 200 with Debian archive magic bytes. This establishes a request-dependent failure; it does not establish a country/IP ban. [Cloudflare documents 1010 as browser-signature blocking](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1010/). [Tenable documents Nessus downloads as not requiring authentication](https://developer.tenable.com/reference/downloads), consistent with the catalog's `requires_auth: false` for this package.
+
+The smoke workflow now uses those application headers and reports only bounded HTTP/Cloudflare codes on refusal. It does not impersonate a browser, switch proxies or locations, alter TLS verification, or use another download source. A full runner installation must still pass before this gate is reported as cleared. The installer also accepts a locally supplied verified package; the hosted workflow does not upload or redistribute one. Licensed engine upgrades and online delivery remain unverified until legitimate registration is available in an isolated test environment.
 
 ## Version 0.1.0 baseline, executed before its publication
 

@@ -36,8 +36,11 @@ def parse_catalog(data):
             if not match or version != match.group(1):
                 continue
             require(re.fullmatch(r"[0-9a-fA-F]{64}", sha) is not None, "VENDOR_CATALOG_CHECKSUM_MISSING")
+            url = item.get("file_url")
+            allowed = {CATALOG + "/files/" + quote(n, safe="") for n in (name, name.replace("Nessus-" + version + "-", "Nessus-latest-", 1))}
+            require(isinstance(url, str) and url in allowed, "VENDOR_CATALOG_DOWNLOAD_URL_UNRECOGNIZED")
             candidates.append({"version": version, "file": name, "sha256": sha.lower(), "size": item.get("size"),
-                               "url": CATALOG + "/files/" + quote(name, safe=""), "requiresAuth": item.get("requires_auth", True)})
+                               "url": url, "requiresAuth": item.get("requires_auth", True)})
     require(candidates, "NO_SUPPORTED_OFFICIAL_DEB_RELEASE_FOUND")
     newest = max(version_tuple(p["version"]) for p in candidates)
     return {"source": CATALOG, "latestVersion": ".".join(map(str, newest)),

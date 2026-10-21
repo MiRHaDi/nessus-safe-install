@@ -475,5 +475,7 @@ def run_update(api, backup, command, lock_fd, timeout, restart_check=False):
 def engine_version(lock_fd):
     rc, raw = native([ROOT / "sbin/nessusd", "-v"], lock_fd=lock_fd, capture=True)
     match = re.search(rb"(?:nessusd\s*(?:\(Nessus\))?|Nessus)\s+(?:version\s+)?v?(\d+\.\d+\.\d+)(?![\d.])", raw, re.I)
-    require(rc == 0 and match is not None, "NATIVE_ENGINE_VERSION_UNRECOGNIZED")
+    # Some Nessus builds use informational status 42 for -v. A valid banner
+    # is still mandatory; this is not a service-health or registration check.
+    require(rc in (0, 42) and match is not None, "NATIVE_ENGINE_VERSION_UNRECOGNIZED")
     return match.group(1).decode("ascii")

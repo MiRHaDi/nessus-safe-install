@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       package_url:
-        description: Official version-pinned Ubuntu amd64 .deb URL
+        description: Official catalog Ubuntu amd64 .deb URL (SHA-256 pinned)
         required: true
         type: string
       package_sha256:
@@ -35,10 +35,11 @@ jobs:
           import os,re,hashlib,urllib.request
           from pathlib import Path
           url=os.environ['PACKAGE_URL'];sha=os.environ['PACKAGE_SHA256']
-          assert re.fullmatch(r'https://www\.tenable\.com/downloads/api/v2/pages/nessus/files/Nessus-\d+\.\d+\.\d+-ubuntu\d+_amd64\.deb',url)
+          assert re.fullmatch(r'https://www\.tenable\.com/downloads/api/v2/pages/nessus/files/Nessus-(?:latest|\d+\.\d+\.\d+)-ubuntu\d+_amd64\.deb',url)
           assert re.fullmatch(r'[a-fA-F0-9]{64}',sha)
           version=os.environ['EXPECTED_VERSION'];assert re.fullmatch(r'\d+\.\d+\.\d+',version)
-          assert '/Nessus-'+version+'-' in url
+          from nessus_safe.versions import fetch_catalog
+          assert any(p['version']==version and p['url']==url and p['sha256']==sha.lower() for p in fetch_catalog()['packages'])
           target=Path(os.environ['RUNNER_TEMP'])/'Nessus.deb';h=hashlib.sha256()
           with urllib.request.urlopen(url,timeout=60) as response,target.open('xb') as out:
               for block in iter(lambda:response.read(1048576),b''):h.update(block);out.write(block)
@@ -51,7 +52,7 @@ jobs:
         run: |
           sudo "$(command -v python)" -m nessus_safe install --package "$RUNNER_TEMP/Nessus.deb" --sha256 "$PACKAGE_SHA256" --apply
           sudo systemctl is-active --quiet nessusd.service
-          sudo /opt/nessus/sbin/nessusd -v | grep -F -- "$EXPECTED_VERSION"
+          sudo "$(command -v python)" -c 'import sys; from nessus_safe.core import engine_version; v=engine_version(None); print(v); assert v==sys.argv[1]' "$EXPECTED_VERSION"
           sudo sh -c 'printf synthetic-preservation-test > /opt/nessus/var/nessus/nessus-safe-test-sentinel'
           set +e
           sudo "$(command -v python)" -m nessus_safe install --package "$RUNNER_TEMP/Nessus.deb" --sha256 "$PACKAGE_SHA256" --apply
@@ -62,4 +63,4 @@ jobs:
           sudo systemctl restart nessusd.service
           sudo systemctl is-active --quiet nessusd.service
           test "$(sudo cat /opt/nessus/var/nessus/nessus-safe-test-sentinel)" = synthetic-preservation-test
-          sudo /opt/nessus/sbin/nessusd -v | grep -F -- "$EXPECTED_VERSION"
+          sudo "$(command -v python)" -c 'import sys; from nessus_safe.core import engine_version; v=engine_version(None); print(v); assert v==sys.argv[1]' "$EXPECTED_VERSION"

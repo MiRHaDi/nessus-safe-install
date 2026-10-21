@@ -23,12 +23,13 @@ class VersionTests(unittest.TestCase):
         for value in ("latest", "12.7", "1.2.3;run", None):
             with self.assertRaises(c.Refused): versions.version_tuple(value)
 
-    def test_official_nested_catalog_produces_pinned_urls(self):
-        items = [{"file": "Nessus-10.12.5-ubuntu1604_amd64.deb", "version": "10.12.5", "sha256": "a"*64, "requires_auth": False}]
+    def test_official_nested_catalog_uses_vendor_url_and_pinned_digest(self):
+        url=versions.CATALOG+"/files/Nessus-latest-ubuntu1604_amd64.deb"
+        items = [{"file": "Nessus-10.12.5-ubuntu1604_amd64.deb", "version": "10.12.5", "sha256": "a"*64, "requires_auth": False,"file_url":url}]
         result = versions.parse_catalog({"releases": {"latest": {"Nessus - 10.12.5": items}}})
         self.assertEqual(result["latestVersion"], "10.12.5")
-        self.assertIn("Nessus-10.12.5-", result["packages"][0]["url"])
-        self.assertNotIn("latest-", result["packages"][0]["url"])
+        self.assertEqual(result["packages"][0]["url"],url)
+        self.assertEqual(result["packages"][0]["sha256"],"a"*64)
 
     def test_catalog_cannot_inject_file_path_or_missing_checksum(self):
         for filename, sha in (("../Nessus-10.12.5-ubuntu.deb", "a"*64), ("Nessus-10.12.5-ubuntu.deb", "")):
@@ -36,8 +37,9 @@ class VersionTests(unittest.TestCase):
                 versions.parse_catalog({"releases": {"latest": {"x": [{"file": filename, "version": "10.12.5", "sha256": sha}]}}})
 
     def test_native_version_not_api_banner(self):
-        with patch.object(c, "native", return_value=(0, b"nessusd (Nessus) 10.12.5 [build 20057]")):
-            self.assertEqual(c.engine_version(5), "10.12.5")
+        for code in (0,42):
+            with patch.object(c, "native", return_value=(code, b"nessusd (Nessus) 10.12.5 [build 20057]")):
+                self.assertEqual(c.engine_version(5), "10.12.5")
         with patch.object(c, "native", return_value=(0, b"unrecognized banner 10.12.5")):
             with self.assertRaises(c.Refused): c.engine_version(5)
 

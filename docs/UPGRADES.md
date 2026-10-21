@@ -8,7 +8,7 @@ Plugin updates and engine upgrades are separate operations. Version 0.1.0 only e
 python3 -m nessus_safe versions --current-version 10.12.4
 ```
 
-This read-only command requires no root access. It reads the fixed Tenable HTTPS catalog, reports the latest listed Debian/Ubuntu release and its published SHA-256 values, and produces version-pinned official package URLs. It does not download/install executable code or silently update this tool. The catalog format is vendor-controlled; an unsupported format fails explicitly.
+This read-only command requires no root access. It reads the fixed Tenable HTTPS catalog, reports the latest listed Debian/Ubuntu release and its published SHA-256 values, and uses the exact official download URL provided by that catalog. Some vendor URLs contain a `latest` alias: always verify the recorded SHA-256 so an alias changing between lookup and download fails safely. No download URL or release number is invented. The command does not download/install executable code or silently update this tool. The catalog format is vendor-controlled; an unsupported format fails explicitly.
 
 At verification on **2026-10-22 (Asia/Tehran)**, the catalog listed **10.12.5**. We found no Nessus software release **12.7.4** in the official catalog/release notes. Do not substitute a guessed version or confuse a plugin's target-software version with Nessus itself. Run `versions` again for current information instead of treating this dated observation as permanent.
 

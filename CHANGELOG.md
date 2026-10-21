@@ -2,7 +2,7 @@
 
 ## 0.2.0 — 2026-10-22
 
-- Add read-only `versions` discovery using the official Tenable catalog and version-pinned package URLs/checksums.
+- Add read-only `versions` discovery using exact official catalog URLs and published package checksums; do not synthesize download routes.
 - Add explicit native all-components `upgrade`, expected engine-version readback and mandatory restart acceptance. Require independent host recovery before an upgrade; retain the cross-binary filesystem-rollback refusal.
 - Reconcile exact directory identities after a lost acknowledgement following either restore rename, including a first-rename fsync failure.
 - Recheck owner work after a potentially long restore extraction, before stopping the service.

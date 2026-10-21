@@ -18,7 +18,11 @@ The disposable-runner test was dispatched against the official Ubuntu 10.12.5 pa
 
 A bounded check of the same official URL on the same network returned HTTP 403 with `error code: 1010` for the default Python client. Identifying the application honestly in `User-Agent` and requesting `application/octet-stream` returned HTTP 200 with Debian archive magic bytes. This establishes a request-dependent failure; it does not establish a country/IP ban. [Cloudflare documents 1010 as browser-signature blocking](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1010/). [Tenable documents Nessus downloads as not requiring authentication](https://developer.tenable.com/reference/downloads), consistent with the catalog's `requires_auth: false` for this package.
 
-The smoke workflow now uses those application headers and reports only bounded HTTP/Cloudflare codes on refusal. It does not impersonate a browser, switch proxies or locations, alter TLS verification, or use another download source. A full runner installation must still pass before this gate is reported as cleared. The installer also accepts a locally supplied verified package; the hosted workflow does not upload or redistribute one. Licensed engine upgrades and online delivery remain unverified until legitimate registration is available in an isolated test environment.
+The smoke workflow now uses those application headers and reports only bounded HTTP/Cloudflare codes on refusal. It does not impersonate a browser, switch proxies or locations, alter TLS verification, or use another download source.
+
+**The corrected official-package test passed** on 2026-10-22 (Tehran), at revision `2e69210183e8010c5e6a653747b9d3d44750935c`: [actual run 39688945737](https://github.com/MiRHaDi/nessus-safe-install/actions/runs/39688945737). It downloaded the complete official Ubuntu amd64 package, verified SHA-256 `37be75d7fac07713a366206f02542c24d234a44b339d786a17945a156c5ae059`, installed Nessus, read native engine version `10.12.5`, checked its systemd service, refused repeat installation with exit 2, and retained the synthetic sentinel through restart. The same revision passed all 46 tests on both Python 3.12 and 3.13: [unit/crypto/TLS CI](https://github.com/MiRHaDi/nessus-safe-install/actions/runs/39688944438).
+
+This clears this one fresh-install integration gate. It does not establish plugin readiness, legitimate activation, a real scan, or an online engine/plugin upgrade. The installer also accepts a locally supplied verified package; the hosted workflow does not upload or redistribute one. Licensed engine upgrades and online delivery remain unverified until legitimate registration is available in an isolated test environment.
 
 ## Version 0.1.0 baseline, executed before its publication
 
@@ -36,7 +40,7 @@ Fake API/native-service tests establish orchestration behavior, not vendor compa
 
 ## What remains to be established
 
-- Fresh installation of each supported official package on a clean supported VM.
+- Fresh installation of other official packages/platforms; the Ubuntu 24.04 / Ubuntu amd64 10.12.5 case above has passed.
 - Product onboarding using a legitimate entitlement, trusted HTTPS and actual native online registration.
 - Delivery of a new vendor plugin set, large-library reload timing and persistence after restart.
 - The local archive/signature workflow for each supported product/version.

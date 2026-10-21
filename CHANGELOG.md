@@ -4,6 +4,7 @@
 
 - Identify the official-package smoke-test downloader with its actual application User-Agent and binary Accept header. A same-network check changed from HTTP 403 / Cloudflare 1010 with the default Python client to HTTP 200 with a Debian archive response.
 - Report bounded HTTP/Cloudflare error codes without exposing response bodies, cookies, client IP addresses or signed URLs. Retain the exact official catalog URL and SHA-256 verification.
+- Pass a real official Nessus 10.12.5 Ubuntu package download, checksum, installation, repeat-install refusal and restart/preservation test on a disposable runner. All 46 Linux tests pass on Python 3.12 and 3.13; licensed online upgrades remain a separate unverified gate.
 
 ## 0.2.0 — 2026-10-22
 

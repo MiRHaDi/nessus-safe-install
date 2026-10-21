@@ -1,6 +1,10 @@
 # Validation and release status
 
-Version 0.2.1 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+Version 0.2.2 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+
+## Version 0.2.2 review
+
+The suite contains 52 tests. On Windows/Python 3.12, 45 pass and seven Linux-only tests are skipped. New cases cover read-only observations during active/unknown scan states, preserving the strict mutation gate, keeping an already loaded compiled library despite failed registration, refusing to label an incomplete library reusable, and not exporting scan names/targets. These are diagnostic-policy tests; they do not establish a successful registration repair or an automated cache transfer. Check the Linux CI run for the exact deployed revision.
 
 ## Version 0.2.0 review
 

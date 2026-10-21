@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — 2026-10-22
+
+- Allow read-only `doctor` observations during active or unknown scan states; retain strict idle snapshots for every maintenance path.
+- Add explicit local-reuse guidance: keep a loaded compiled library, separate invalid registration from library health, and avoid treating compiled files as a license repair or an automatic cross-installation cache transfer.
+- Add six regression tests for active/unknown observations, non-disclosure of scan targets, retained compiled state and independent registration failures.
+
 ## 0.2.1 — 2026-10-22
 
 - Identify the official-package smoke-test downloader with its actual application User-Agent and binary Accept header. A same-network check changed from HTTP 403 / Cloudflare 1010 with the default Python client to HTTP 200 with a Debian archive response.

@@ -69,6 +69,27 @@ class RegistrationTests(unittest.TestCase):
         self.assertFalse(r["newPluginDownloadProven"])
 
 
+class LocalReuseTests(unittest.TestCase):
+    def test_working_library_is_retained_despite_registration_failure(self):
+        observed = {**healthy(), "activeOrUnknownScans": 0}
+        result = c.reuse_guidance(observed, {"eligible": False})
+        self.assertEqual(result["libraryAction"], "keep-existing-compiled-library")
+        self.assertEqual(result["registrationAction"], "valid-registration-required")
+        self.assertFalse(result["compiledFilesRepairRegistration"])
+        self.assertFalse(result["automaticCacheTransplantSupported"])
+
+    def test_missing_or_unloaded_library_is_not_reported_as_reusable(self):
+        for change in ({"plugins": 0}, {"families": 0}, {"pluginSet": ""}, {"loadedPluginSet": "other"}):
+            result = c.reuse_guidance({**healthy(), "activeOrUnknownScans": 0, **change}, {"eligible": True})
+            self.assertFalse(result["compiledLibraryLoaded"])
+            self.assertEqual(result["libraryAction"], "review-same-installation-recovery")
+            self.assertFalse(result["newPluginDownloadProven"])
+
+    def test_loaded_and_registered_is_not_permission_to_interrupt_scans(self):
+        result = c.reuse_guidance({**healthy(), "activeOrUnknownScans": 2}, {"eligible": True})
+        self.assertEqual(result["mutationGate"], "active-or-unknown-scans")
+
+
 class ArchiveTests(unittest.TestCase):
     def test_relative_file_and_internal_symlink(self):
         c.validate_member(tarfile.TarInfo("./var/nessus/test.db"))
@@ -130,6 +151,21 @@ class ApiTests(unittest.TestCase):
                 with self.assertRaisesRegex(c.Refused, "ACTIVE_OR_UNKNOWN"):
                     api.snapshot()
             self.assertIsNone(api.token)
+
+    def test_observe_reports_active_unknown_and_terminal_work_without_targets(self):
+        api = c.API("https://localhost:8834", None, "fixture", "fixture")
+        base = {"/server/status": {"status": "ready"}, "/session": {"token": "synthetic"},
+                "/users": {"users": [{"id": 1, "username": "fixture", "permissions": 128}]},
+                "/scans": {"scans": [{"status": "running", "name": "PRIVATE_TARGET"}, {"status": "new-status"}, {"status": "completed"}]},
+                "/policies": {}, "/plugins/families": {"families": [{"count": 100}]},
+                "/server/properties": {"plugin_set": "same", "loaded_plugin_set": "same"}}
+        with patch.object(api, "call", side_effect=lambda path, *a: base[path]):
+            result = api.observe()
+        self.assertEqual(result["activeOrUnknownScans"], 2)
+        self.assertEqual(result["scans"], 3)
+        self.assertEqual(result["plugins"], 100)
+        self.assertNotIn("PRIVATE_TARGET", json.dumps(result))
+        self.assertIsNone(api.token)
 
     def test_deferred_reload_resets_stability_window(self):
         api = c.API("https://localhost:8834", None, "fixture", "fixture")

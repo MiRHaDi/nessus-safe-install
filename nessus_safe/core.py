@@ -177,7 +177,8 @@ class API:
             finally:
                 self.token = None
 
-    def snapshot(self):
+    def observe(self):
+        """Read state even during scans; this observation cannot authorize writes."""
         require(self.call("/server/status").get("status") == "ready", "NESSUS_NOT_READY")
         with self.session():
             users = self.call("/users").get("users") or []
@@ -185,14 +186,20 @@ class API:
             policies = self.call("/policies").get("policies") or []
             families = self.call("/plugins/families").get("families") or []
             props = self.call("/server/properties")
-            require(all(str(s.get("status", "unknown")).lower() in TERMINAL for s in scans), "ACTIVE_OR_UNKNOWN_SCAN_STATE")
+            nonterminal = sum(str(s.get("status", "unknown")).lower() not in TERMINAL for s in scans)
             require(users, "ADMINISTRATOR_USERS_READBACK_REQUIRED")
             def hash_rows(rows):
                 return hashlib.sha256(canonical(sorted(rows, key=canonical))).hexdigest()
             return {"users": len(users), "identities": hash_rows([(u["id"], u["username"], u.get("permissions")) for u in users]),
                     "scans": len(scans), "scanMetadata": hash_rows(scans), "policies": len(policies), "policyMetadata": hash_rows(policies),
                     "families": len(families), "plugins": sum(f.get("count", 0) for f in families if isinstance(f.get("count"), int)),
-                    "pluginSet": props.get("plugin_set"), "loadedPluginSet": props.get("loaded_plugin_set")}
+                    "pluginSet": props.get("plugin_set"), "loadedPluginSet": props.get("loaded_plugin_set"),
+                    "activeOrUnknownScans": nonterminal}
+
+    def snapshot(self):
+        observed = self.observe()
+        require(observed.pop("activeOrUnknownScans") == 0, "ACTIVE_OR_UNKNOWN_SCAN_STATE")
+        return observed
 
     def wait_ready(self, timeout):
         deadline = time.monotonic() + timeout
@@ -224,6 +231,18 @@ class API:
                 since, last = None, None
             require(time.monotonic() < deadline, "STABLE_READBACK_TIMEOUT_NATIVE_WORK_NOT_TERMINATED")
             time.sleep(5)
+
+
+def reuse_guidance(observed, registration):
+    """Preserve a loaded local library; never confuse compiled data with a license."""
+    loaded = bool(observed["plugins"] > 0 and observed["families"] > 0
+                  and observed["pluginSet"] and observed["pluginSet"] == observed["loadedPluginSet"])
+    return {"compiledLibraryLoaded": loaded,
+            "libraryAction": "keep-existing-compiled-library" if loaded else "review-same-installation-recovery",
+            "registrationAction": "native-online-update-eligible" if registration["eligible"] else "valid-registration-required",
+            "mutationGate": "active-or-unknown-scans" if observed["activeOrUnknownScans"] else "exclusive-maintenance-required",
+            "compiledFilesRepairRegistration": False, "automaticCacheTransplantSupported": False,
+            "newPluginDownloadProven": False}
 
 
 def validate_delivery(before, after):

@@ -25,10 +25,28 @@ class CommandGateTests(unittest.TestCase):
         service.assert_not_called()
 
     def test_doctor_does_not_accept_unloaded_set(self):
-        api = Mock(); api.snapshot.return_value = {"plugins": 20, "families": 2, "pluginSet": "new", "loadedPluginSet": "old"}
+        api = Mock(); api.observe.return_value = {"plugins": 20, "families": 2, "pluginSet": "new", "loadedPluginSet": "old", "activeOrUnknownScans": 0}
         with patch.object(cli, "client", return_value=api), patch.object(c, "native", return_value=(0, b"registered")), patch.object(c, "engine_version", return_value="10.12.4"):
             result = cli.execute(self.args("doctor"), 5)
         self.assertFalse(result["healthyForOnlineUpdates"])
+
+    def test_doctor_reports_active_work_without_starting_a_mutation(self):
+        api = Mock(); api.observe.return_value = {"plugins": 20, "families": 2, "pluginSet": "same", "loadedPluginSet": "same", "activeOrUnknownScans": 1}
+        with patch.object(cli, "client", return_value=api), patch.object(c, "native", return_value=(0, b"registered")), \
+             patch.object(c, "engine_version", return_value="10.12.5"), patch.object(c, "service") as service, patch.object(c, "run_update") as update:
+            result = cli.execute(self.args("doctor"), 5)
+        self.assertEqual(result["localReuse"]["mutationGate"], "active-or-unknown-scans")
+        self.assertEqual(result["localReuse"]["libraryAction"], "keep-existing-compiled-library")
+        service.assert_not_called(); update.assert_not_called()
+
+    def test_loaded_compiled_files_do_not_hide_failed_registration(self):
+        api = Mock(); api.observe.return_value = {"plugins": 20, "families": 2, "pluginSet": "same", "loadedPluginSet": "same", "activeOrUnknownScans": 0}
+        with patch.object(cli, "client", return_value=api), patch.object(c, "native", return_value=(1, b"Could not validate this preference file")), \
+             patch.object(c, "engine_version", return_value="10.12.5"):
+            result = cli.execute(self.args("doctor"), 5)
+        self.assertFalse(result["healthyForOnlineUpdates"])
+        self.assertTrue(result["localReuse"]["compiledLibraryLoaded"])
+        self.assertEqual(result["localReuse"]["registrationAction"], "valid-registration-required")
 
     def test_password_is_not_a_supported_argument(self):
         with contextlib.redirect_stderr(__import__("io").StringIO()):

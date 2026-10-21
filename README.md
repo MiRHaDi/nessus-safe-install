@@ -121,6 +121,8 @@ The local files are copied into private storage and checked again before use. On
 
 ## Failure and recovery
 
+The read-only `doctor` command reports `localReuse`: retain an already loaded compiled library and diagnose online registration independently. It can observe active scans without authorizing a mutation; all maintenance paths retain their strict idle checks. See [local reuse and registration boundaries](docs/LOCAL_REUSE.md). Automatic cache transplantation between installations is not supported.
+
 A failed update does **not** trigger a blind restore over possible new work. The current tree and the verified encrypted snapshot are retained; the command returns a reviewable failure. [Recovery instructions](docs/RECOVERY.md) explain the explicit same-installation restore, preserved-tree location and limits.
 
 This tool does not delete files, prune snapshots, uninstall packages or repair package-manager state by removal. Storage retention is a separate operator decision. It cannot prevent vendor software, another administrator or an external job from deleting data; reserve maintenance and keep independent backups.

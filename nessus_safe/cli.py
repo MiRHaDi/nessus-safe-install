@@ -131,8 +131,9 @@ def execute(args, fd):
     api = client(args)
     if args.command == "doctor":
         code, raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
-        result = {"api": api.snapshot(), "nativeRegistration": c.registration_result(code, raw), "engineVersion": c.engine_version(fd)}
+        result = {"api": api.observe(), "nativeRegistration": c.registration_result(code, raw), "engineVersion": c.engine_version(fd)}
         observed = result["api"]
+        result["localReuse"] = c.reuse_guidance(observed, result["nativeRegistration"])
         result["healthyForOnlineUpdates"] = bool(result["nativeRegistration"]["eligible"] and observed["plugins"] > 0
             and observed["families"] > 0 and observed["pluginSet"] and observed["pluginSet"] == observed["loadedPluginSet"])
         return result

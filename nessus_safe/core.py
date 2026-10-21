@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import posixpath
+import re
 import shutil
 import signal
 import socket
@@ -30,6 +31,9 @@ TERMINAL = {"completed", "canceled", "cancelled", "aborted", "empty", "imported"
 
 class Refused(RuntimeError):
     """Only fixed, secret-free error codes are exposed to callers."""
+    def __init__(self, code, *, evidence=None):
+        super().__init__(code)
+        self.evidence = evidence or {}
 
 
 def require(condition, code):
@@ -55,6 +59,12 @@ def write_json(path, value):
         f.write(canonical(value) + b"\n")
         f.flush()
         os.fsync(f.fileno())
+    if os.name == "posix":
+        fd = os.open(Path(path).parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
 
 
 def private_directory(path):
@@ -307,6 +317,8 @@ class Backup:
                 p.stdin.close()
         require(p.wait() == 0, "BACKUP_ENCRYPTION_FAILED")
         self.archive.chmod(0o600)
+        with self.archive.open("rb") as durable:
+            os.fsync(durable.fileno())
         actual = self.plaintext_digest()
         require(actual == h.hexdigest(), "BACKUP_DECRYPTION_READBACK_FAILED")
         metadata = {"format": 1, "createdAt": time.time(), "ciphertextSha256": digest(self.archive),
@@ -411,12 +423,21 @@ def rename_no_replace(source, target):
 
 
 def promote_restore(incoming, current, preserved):
-    old = current.stat().st_ino
-    rename_no_replace(current, preserved)
+    def token(p):
+        s = p.lstat()
+        require(stat.S_ISDIR(s.st_mode), "RESTORE_DIRECTORY_TOKEN_REQUIRED")
+        return s.st_dev, s.st_ino
+    old, new = token(current), token(incoming)
+    require(old[0] == new[0] and not preserved.exists() and not preserved.is_symlink(), "RESTORE_SWAP_TARGET_CONFLICT")
     try:
+        rename_no_replace(current, preserved)
         rename_no_replace(incoming, current)
     except BaseException:
-        if not current.exists() and preserved.stat().st_ino == old:
+        # A rename can succeed even when its subsequent fsync/acknowledgement
+        # fails. Reconcile exact inodes rather than assuming no effect occurred.
+        if current.exists() and token(current) == new and not incoming.exists() and preserved.exists() and token(preserved) == old:
+            rename_no_replace(current, incoming)
+        if not current.exists() and preserved.exists() and token(preserved) == old:
             rename_no_replace(preserved, current)
         raise
     return {"previousTreePreserved": True, "preservedPath": str(preserved)}
@@ -424,7 +445,7 @@ def promote_restore(incoming, current, preserved):
 
 def run_update(api, backup, command, lock_fd, timeout, restart_check=False):
     before = api.snapshot()
-    require(before["plugins"] > 0, "HEALTHY_PLUGIN_BASELINE_REQUIRED")
+    validate_delivery(before, before)
     identity = installation_identity()
     stopped = False
     try:
@@ -449,3 +470,10 @@ def run_update(api, backup, command, lock_fd, timeout, restart_check=False):
         require(restarted == after, "RESTART_PERSISTENCE_MISMATCH")
     return {"before": before, "after": after, "restartVerified": restart_check,
             "pluginSetChanged": before["pluginSet"] != after["pluginSet"], "nativeUpdateExitCode": rc}
+
+
+def engine_version(lock_fd):
+    rc, raw = native([ROOT / "sbin/nessusd", "-v"], lock_fd=lock_fd, capture=True)
+    match = re.search(rb"(?:nessusd\s*(?:\(Nessus\))?|Nessus)\s+(?:version\s+)?v?(\d+\.\d+\.\d+)(?![\d.])", raw, re.I)
+    require(rc == 0 and match is not None, "NATIVE_ENGINE_VERSION_UNRECOGNIZED")
+    return match.group(1).decode("ascii")

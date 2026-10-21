@@ -37,7 +37,7 @@ Do not use activation codes, passwords or private feed URLs in command-line argu
 
 ## Native process boundaries
 
-The tool does not rewrite feed metadata, change marker permissions, patch executables, reset registration, set a custom feed or transplant compiled caches. Native `nessuscli update` owns those transitions. A healthy authenticated baseline is mandatory; an existing empty/broken installation requires diagnosis before it can become an update baseline.
+The tool does not rewrite feed metadata, change marker permissions, patch executables, reset registration, set a custom feed or transplant compiled caches. Native `nessuscli update` owns those transitions. A healthy authenticated baseline is mandatory; an existing empty/broken installation requires diagnosis before it can become an update baseline. `upgrade` additionally invokes native `--all`, checks the actual native engine version, requires independent host recovery and always checks restart persistence; see [engine upgrade boundaries](UPGRADES.md).
 
 Update subprocesses run in a separate session. SIGINT/SIGTERM are deferred while a native command is running, and the native process inherits the operation lock. The wrapper waits for a real exit rather than killing an updater on a timer. SIGKILL, power loss and vendor descendants closing inherited descriptors still require operator recovery; this is not a full transaction coordinator.
 

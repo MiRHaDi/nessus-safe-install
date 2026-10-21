@@ -10,6 +10,8 @@ Use the supported recovery path for that exact installation and your legitimate 
 
 Read the reported error code and the private receipt. A native command failure, an empty library, changed owner data or an API readiness deadline is a failure requiring investigation. A readiness timeout leaves native work intact; do not replay an update while it is still running.
 
+Version 0.2.0 writes a private intent with the snapshot reference before starting an update. A refused operation also includes its snapshot reference in the failure receipt. If the engine binary changed, use the independent host recovery path required by `upgrade`; the filesystem-only rollback still refuses a different binary.
+
 The pre-update snapshot is under `/var/lib/nessus-safe-install/snapshot-.../`. It contains encrypted `nessus-tree.tar.gpg`, a private manifest and an empty-purpose GPG home. Retain your passphrase separately. No automated pruning occurs: monitor free space and apply your own reviewed retention policy.
 
 Native update failures are not automatically rolled back over possible new work. Reserve an exclusive maintenance window, inspect all users' work and use explicit recovery only when appropriate.

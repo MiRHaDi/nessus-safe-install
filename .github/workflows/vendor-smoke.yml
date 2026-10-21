@@ -1,0 +1,65 @@
+name: Official package smoke test
+on:
+  workflow_dispatch:
+    inputs:
+      package_url:
+        description: Official version-pinned Ubuntu amd64 .deb URL
+        required: true
+        type: string
+      package_sha256:
+        description: SHA-256 from the official vendor catalog
+        required: true
+        type: string
+      expected_version:
+        description: Exact expected Nessus engine version
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  fresh-install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Download and verify official package
+        env:
+          PACKAGE_URL: ${{ inputs.package_url }}
+          PACKAGE_SHA256: ${{ inputs.package_sha256 }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          python - <<'PY'
+          import os,re,hashlib,urllib.request
+          from pathlib import Path
+          url=os.environ['PACKAGE_URL'];sha=os.environ['PACKAGE_SHA256']
+          assert re.fullmatch(r'https://www\.tenable\.com/downloads/api/v2/pages/nessus/files/Nessus-\d+\.\d+\.\d+-ubuntu\d+_amd64\.deb',url)
+          assert re.fullmatch(r'[a-fA-F0-9]{64}',sha)
+          version=os.environ['EXPECTED_VERSION'];assert re.fullmatch(r'\d+\.\d+\.\d+',version)
+          assert '/Nessus-'+version+'-' in url
+          target=Path(os.environ['RUNNER_TEMP'])/'Nessus.deb';h=hashlib.sha256()
+          with urllib.request.urlopen(url,timeout=60) as response,target.open('xb') as out:
+              for block in iter(lambda:response.read(1048576),b''):h.update(block);out.write(block)
+          assert h.hexdigest()==sha.lower()
+          PY
+      - name: Install on this disposable runner and test preservation
+        env:
+          PACKAGE_SHA256: ${{ inputs.package_sha256 }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          sudo "$(command -v python)" -m nessus_safe install --package "$RUNNER_TEMP/Nessus.deb" --sha256 "$PACKAGE_SHA256" --apply
+          sudo systemctl is-active --quiet nessusd.service
+          sudo /opt/nessus/sbin/nessusd -v | grep -F -- "$EXPECTED_VERSION"
+          sudo sh -c 'printf synthetic-preservation-test > /opt/nessus/var/nessus/nessus-safe-test-sentinel'
+          set +e
+          sudo "$(command -v python)" -m nessus_safe install --package "$RUNNER_TEMP/Nessus.deb" --sha256 "$PACKAGE_SHA256" --apply
+          status=$?
+          set -e
+          test "$status" -eq 2
+          test "$(sudo cat /opt/nessus/var/nessus/nessus-safe-test-sentinel)" = synthetic-preservation-test
+          sudo systemctl restart nessusd.service
+          sudo systemctl is-active --quiet nessusd.service
+          test "$(sudo cat /opt/nessus/var/nessus/nessus-safe-test-sentinel)" = synthetic-preservation-test
+          sudo /opt/nessus/sbin/nessusd -v | grep -F -- "$EXPECTED_VERSION"

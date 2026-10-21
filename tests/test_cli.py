@@ -26,7 +26,7 @@ class CommandGateTests(unittest.TestCase):
 
     def test_doctor_does_not_accept_unloaded_set(self):
         api = Mock(); api.snapshot.return_value = {"plugins": 20, "families": 2, "pluginSet": "new", "loadedPluginSet": "old"}
-        with patch.object(cli, "client", return_value=api), patch.object(c, "native", return_value=(0, b"registered")):
+        with patch.object(cli, "client", return_value=api), patch.object(c, "native", return_value=(0, b"registered")), patch.object(c, "engine_version", return_value="10.12.4"):
             result = cli.execute(self.args("doctor"), 5)
         self.assertFalse(result["healthyForOnlineUpdates"])
 

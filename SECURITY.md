@@ -1,6 +1,6 @@
 # Security policy
 
-This project is privileged operator tooling. Version 0.1.x is alpha and requires source review and testing on a disposable VM before production use. It does not replace vendor support, authorization or independent backups.
+This project is privileged operator tooling. Versions 0.x are alpha and require source review and testing on a disposable VM before production use. It does not replace vendor support, authorization or independent backups.
 
 Report vulnerabilities privately through GitHub's **Report a vulnerability** feature when enabled. If unavailable, use a minimal public issue asking for a private reporting channel; do not include exploitation details or sensitive data in that initial issue.
 

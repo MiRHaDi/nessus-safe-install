@@ -6,7 +6,7 @@
 
 **Install official Tenable Nessus packages and perform guarded native plugin updates while retaining recoverable data.**
 
-[فارسی](README.fa.md) · [Recovery](docs/RECOVERY.md) · [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Security](SECURITY.md)
+[فارسی](README.fa.md) · [Engine upgrades](docs/UPGRADES.md) · [Recovery](docs/RECOVERY.md) · [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Security](SECURITY.md)
 
 An independent, early-stage operations tool for native Debian/Ubuntu hosts. It does not distribute Nessus, plugins, licenses or activation codes. A valid Tenable entitlement and working registration remain necessary for online updates. This project cannot turn an invalid registration into a valid one or guarantee that a vendor feed will be available.
 
@@ -22,9 +22,11 @@ This tool delegates installation and plugin processing to the vendor. It checks 
 | --- | --- |
 | `install` | Verifies a supplied official `.deb` against an independently trusted SHA-256, checks package name/architecture and refuses an existing installation. Prints a plan unless `--apply` is supplied. |
 | `doctor` | Checks the trusted HTTPS API and native registration. Returns an error for a broken registration instead of claiming online updates work. |
+| `versions` | Reads the current official Tenable release catalog and published SHA-256 values. Does not require root or install code. |
 | `backup` | Stops the service during exclusive maintenance; creates an AES-256 encrypted full-tree snapshot and verifies actual decryption before resuming. |
 | `update` | Uses `nessuscli update --plugins-only`, or a supplied licensed local archive. Requires a healthy baseline, verified snapshot, stable post-update API and unchanged owner data. |
 | `update --verify-restart` | Additionally restarts the service and verifies that the same plugin library and owner data remain available. |
+| `upgrade` | Runs the native all-components updater and verifies an exact expected engine version, owner data and restart. Requires valid registration and independent host recovery. |
 | `rollback` | Restores a verified same-installation snapshot. Keeps the displaced current tree in a separate directory; never merges over or deletes it. |
 
 Snapshots and operational receipts are private files under `/var/lib/nessus-safe-install/`. They must never be committed to a repository. Raw native registration output, passwords and session tokens are not included in receipts.
@@ -113,6 +115,10 @@ sudo python3 -m nessus_safe update \
 
 The local files are copied into private storage and checked again before use. Only the vendor CLI reads the archive; this project never extracts a vendor plugin bundle or alters its signatures. It cannot make an online scanner an offline-licensed scanner. Check your edition's [offline installation requirements](https://docs.tenable.com/nessus/Content/InstallNessusOffline.htm); in particular, offline registration is not available in Nessus Essentials.
 
+## Engine/software upgrades
+
+`update` handles plugins; `upgrade` handles a native all-components engine/software update. Discover the current vendor release with `python3 -m nessus_safe versions --current-version YOUR_INSTALLED_VERSION`, then follow [engine upgrade and recovery requirements](docs/UPGRADES.md). An update channel may not yet offer the release you request. The tool never silently enables a new channel, installs a guessed version, downgrades a scanner or updates its own source code.
+
 ## Failure and recovery
 
 A failed update does **not** trigger a blind restore over possible new work. The current tree and the verified encrypted snapshot are retained; the command returns a reviewable failure. [Recovery instructions](docs/RECOVERY.md) explain the explicit same-installation restore, preserved-tree location and limits.
@@ -125,7 +131,7 @@ This tool does not delete files, prune snapshots, uninstall packages or repair p
 python3 -m unittest discover -s tests -v
 ```
 
-No Python runtime dependencies. The Linux suite includes actual GPG encrypt/decrypt/restore, wrong-key/corruption refusal, atomic rename rollback, deferred reload stability, active-work refusal and owner-data/plugin-regression checks. GitHub Actions runs Python 3.12 and 3.13. Tests use synthetic data and do not download or activate Nessus.
+No Python runtime dependencies. The Linux suite includes actual GPG encrypt/decrypt/restore, wrong-key/corruption refusal, real TLS certificate checks, lost-acknowledgement rename recovery, deferred reload stability, active-work refusal, engine-upgrade gates and owner-data/plugin-regression checks. GitHub Actions runs Python 3.12 and 3.13. Unit tests use synthetic data and do not download or activate Nessus. The separate opt-in official-package smoke workflow installs a verified vendor package only on a disposable runner; it does not activate the product or prove licensed online updates.
 
 ## Vendor references
 

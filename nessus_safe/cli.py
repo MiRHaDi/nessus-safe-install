@@ -15,6 +15,7 @@ import uuid
 
 from . import __version__
 from . import core as c
+from . import versions
 
 
 def secret(fd, prompt):
@@ -96,7 +97,9 @@ def parser():
     install.add_argument("--package", required=True, type=Path)
     install.add_argument("--sha256", required=True)
     install.add_argument("--apply", action="store_true")
-    for name in ("doctor", "backup", "update", "rollback"):
+    release = sub.add_parser("versions", help="Read official latest-release metadata; no root or installation changes")
+    release.add_argument("--current-version")
+    for name in ("doctor", "backup", "update", "upgrade", "rollback"):
         s = sub.add_parser(name)
         s.add_argument("--url", required=True, help="HTTPS origin with a trusted matching server certificate")
         s.add_argument("--ca-file", type=Path)
@@ -114,6 +117,10 @@ def parser():
             s.add_argument("--verify-restart", action="store_true")
         if name == "rollback":
             s.add_argument("--snapshot", required=True, type=Path)
+        if name == "upgrade":
+            s.add_argument("--expected-version", required=True, help="Exact expected native engine version")
+            s.add_argument("--external-recovery-confirmed", action="store_true", required=True,
+                           help="Independent host/VM recovery exists for changes outside /opt/nessus")
     return p
 
 
@@ -124,7 +131,7 @@ def execute(args, fd):
     api = client(args)
     if args.command == "doctor":
         code, raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
-        result = {"api": api.snapshot(), "nativeRegistration": c.registration_result(code, raw)}
+        result = {"api": api.snapshot(), "nativeRegistration": c.registration_result(code, raw), "engineVersion": c.engine_version(fd)}
         observed = result["api"]
         result["healthyForOnlineUpdates"] = bool(result["nativeRegistration"]["eligible"] and observed["plugins"] > 0
             and observed["families"] > 0 and observed["pluginSet"] and observed["pluginSet"] == observed["loadedPluginSet"])
@@ -144,6 +151,7 @@ def execute(args, fd):
         c.require(shutil.disk_usage(c.ROOT.parent).free > total + 2 * 1024**3, "INSUFFICIENT_RESTORE_SPACE")
         incoming = Path(tempfile.mkdtemp(prefix=".nessus-safe-restore-", dir=c.ROOT.parent))
         backup.extract(incoming)
+        c.require(api.snapshot() == current, "CURRENT_WORK_CHANGED_DURING_RESTORE_PREPARATION")
         preserved = c.ROOT.parent / ("nessus-preserved-" + uuid.uuid4().hex)
         stopped = False
         try:
@@ -177,7 +185,18 @@ def execute(args, fd):
         c.require(api.snapshot() == before, "POST_BACKUP_READBACK_CHANGED")
         return {"encryptedSnapshot": str(directory), "decryptionReadbackVerified": True, "api": before}
     command = [c.CLI, "update", "--plugins-only"]
-    if args.archive:
+    version_before = None
+    if args.command == "upgrade":
+        target = versions.version_tuple(args.expected_version)
+        version_before = c.engine_version(fd)
+        c.require(target >= versions.version_tuple(version_before), "DOWNGRADE_REQUEST_REFUSED")
+        code, raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
+        c.require(c.registration_result(code, raw)["eligible"], "REGISTRATION_CHECK_FAILED_NO_UPGRADE_STARTED")
+        if target == versions.version_tuple(version_before):
+            baseline = api.snapshot(); c.validate_delivery(baseline, baseline)
+            return {"engineVersion": version_before, "delivery": "already-current", "nativeUpgradeStarted": False}
+        command = [c.CLI, "update", "--all"]
+    elif args.archive:
         c.require(args.sha256, "ARCHIVE_SHA256_REQUIRED")
         c.require(bool(args.signature) == bool(args.signature_sha256), "SIGNATURE_AND_DIGEST_MUST_BE_SUPPLIED_TOGETHER")
         archive = c.verified_file(args.archive, args.sha256)
@@ -200,12 +219,35 @@ def execute(args, fd):
         c.require(not args.signature and not args.sha256 and not args.signature_sha256, "ARCHIVE_ARGUMENTS_REQUIRE_ARCHIVE")
         code, raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
         c.require(c.registration_result(code, raw)["eligible"], "REGISTRATION_CHECK_FAILED_NO_UPDATE_STARTED")
-    result = c.run_update(api, backup, command, fd, args.wait_seconds, args.verify_restart)
-    return {**result, "encryptedSnapshot": str(directory), "delivery": "new-plugin-set" if result["pluginSetChanged"] else "already-current-or-same-set"}
+    c.write_json(c.STATE / ("intent-" + uuid.uuid4().hex + ".json"), {"at": time.time(), "command": args.command,
+        "encryptedSnapshot": str(directory), "expectedEngineVersion": getattr(args, "expected_version", None),
+        "engineVersionBefore": version_before,
+        "externalRecoveryConfirmed": getattr(args, "external_recovery_confirmed", False)})
+    try:
+        result = c.run_update(api, backup, command, fd, args.wait_seconds, args.command == "upgrade" or args.verify_restart)
+        if args.command == "upgrade":
+            version_after = c.engine_version(fd)
+            c.require(version_after == args.expected_version, "EXPECTED_ENGINE_VERSION_NOT_DELIVERED")
+            result.update(engineVersionBefore=version_before, engineVersionAfter=version_after,
+                          engineUpgradeVerified=True, filesystemRollbackAcrossBinaryVersionsSupported=False)
+    except c.Refused as error:
+        error.evidence.update(encryptedSnapshot=str(directory), command=args.command,
+                              externalRecoveryRequiredIfBinaryChanged=args.command == "upgrade")
+        raise
+    delivery = "engine-upgraded" if args.command == "upgrade" else "new-plugin-set" if result["pluginSetChanged"] else "already-current-or-same-set"
+    return {**result, "encryptedSnapshot": str(directory), "delivery": delivery}
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    if args.command == "versions":
+        try:
+            result = versions.fetch_catalog()
+            if args.current_version:
+                result["upgradeAvailable"] = versions.version_tuple(result["latestVersion"]) > versions.version_tuple(args.current_version)
+            print(json.dumps(result, indent=2)); return 0
+        except (c.Refused, OSError, ValueError, KeyError) as e:
+            print(json.dumps({"error": str(e) if isinstance(e, c.Refused) else type(e).__name__})); return 2
     result, code, receipt = {}, 0, None
     try:
         platform_check()
@@ -218,6 +260,8 @@ def main(argv=None):
             except (c.Refused, OSError, ValueError, KeyError, tarfile.TarError, subprocess.SubprocessError) as e:
                 result = {"error": str(e) if isinstance(e, c.Refused) else type(e).__name__,
                           "recovery": "Retain current state and snapshots. Inspect the cause before retrying; rollback is explicit."}
+                if isinstance(e, c.Refused):
+                    result.update(e.evidence)
                 code = 2
             c.write_json(receipt, {"at": time.time(), "command": args.command, "exitCode": code, "result": result})
     except (c.Refused, OSError) as e:

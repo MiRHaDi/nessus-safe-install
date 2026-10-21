@@ -48,13 +48,13 @@ class UpgradeTests(unittest.TestCase):
     def args(self):
         return cli.parser().parse_args(["upgrade", "--url", "https://localhost:8834", "--maintenance-window", "--expected-version", "10.12.5", "--external-recovery-confirmed"])
 
-    def run_upgrade(self, before="10.12.4", after="10.12.5", registration=0):
+    def run_upgrade(self, before="10.12.4", after="10.12.5", registration=0, post_registration=0):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); api = Mock(); api.snapshot.return_value = healthy()
             result = {"pluginSetChanged": False, "restartVerified": True}
             with patch.object(c, "ROOT", root), patch.object(c, "STATE", root), patch.object(c.os.path, "ismount", return_value=False), \
                  patch.object(cli, "client", return_value=api), patch.object(cli, "secret", return_value=b"synthetic-backup-passphrase"), \
-                 patch.object(c, "engine_version", side_effect=[before, after]), patch.object(c, "native", return_value=(registration, b"registered")), \
+                 patch.object(c, "engine_version", side_effect=[before, after]), patch.object(c, "native", side_effect=[(registration,b"registered"),(post_registration,b"registered")]), \
                  patch.object(c, "run_update", return_value=result) as updater:
                 try: outcome = cli.execute(self.args(), 5)
                 except c.Refused as e: outcome = str(e)
@@ -80,6 +80,11 @@ class UpgradeTests(unittest.TestCase):
     def test_same_version_is_noop(self):
         result, _, count = self.run_upgrade(before="10.12.5")
         self.assertEqual(result["delivery"], "already-current"); self.assertEqual(count, 0)
+
+    def test_registration_regression_after_upgrade_is_not_success(self):
+        result, _, count = self.run_upgrade(post_registration=1)
+        self.assertEqual(result,"POST_UPDATE_REGISTRATION_CHECK_FAILED")
+        self.assertEqual(count,1)
 
 
 class RecoveryRegressionTests(unittest.TestCase):

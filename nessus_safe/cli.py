@@ -230,6 +230,11 @@ def execute(args, fd):
             c.require(version_after == args.expected_version, "EXPECTED_ENGINE_VERSION_NOT_DELIVERED")
             result.update(engineVersionBefore=version_before, engineVersionAfter=version_after,
                           engineUpgradeVerified=True, filesystemRollbackAcrossBinaryVersionsSupported=False)
+        if args.command == "upgrade" or not args.archive:
+            check_code, check_raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
+            checked = c.registration_result(check_code, check_raw)
+            c.require(checked["eligible"], "POST_UPDATE_REGISTRATION_CHECK_FAILED")
+            result["nativeRegistrationAfter"] = checked
     except c.Refused as error:
         error.evidence.update(encryptedSnapshot=str(directory), command=args.command,
                               externalRecoveryRequiredIfBinaryChanged=args.command == "upgrade")

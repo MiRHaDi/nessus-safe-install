@@ -4,6 +4,7 @@
 
 - Add read-only `versions` discovery using exact official catalog URLs and published package checksums; do not synthesize download routes.
 - Add explicit native all-components `upgrade`, expected engine-version readback and mandatory restart acceptance. Require independent host recovery before an upgrade; retain the cross-binary filesystem-rollback refusal.
+- Recheck native registration after online updates/upgrades; recognize a strictly parsed informational version banner with exit42 without treating it as service health.
 - Reconcile exact directory identities after a lost acknowledgement following either restore rename, including a first-rename fsync failure.
 - Recheck owner work after a potentially long restore extraction, before stopping the service.
 - Refuse incomplete installed/loaded plugin baselines before backup/service changes.

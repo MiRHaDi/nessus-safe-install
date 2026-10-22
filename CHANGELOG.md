@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3 — 2026-10-22
+
+- Let read-only `doctor` observe the specific native feed-download failure state when login, engine and database are available. Keep strict ready-state checks for every maintenance snapshot.
+- Report sanitized readiness booleans, preserve local-library guidance, and return unhealthy online-update status even if a native registration check succeeds during a feed failure.
+- Explicitly report that target-scan acceptance is not established by `doctor`; document IP tracking refusal, out-of-range probe waits, safe diagnostics and concrete acceptance/recovery boundaries in English and Persian.
+- Add seven regression tests. All 59 tests pass on Linux/Python 3.12.3, including actual GPG/TLS/rename fixtures; Windows passes 52 with seven platform skips. Real licensed scan/online-update acceptance remains separate.
+
 ## 0.2.2 — 2026-10-22
 
 - Allow read-only `doctor` observations during active or unknown scan states; retain strict idle snapshots for every maintenance path.

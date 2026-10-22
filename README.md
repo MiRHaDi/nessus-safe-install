@@ -2,13 +2,13 @@
 
 [![Tests](https://github.com/MiRHaDi/nessus-safe-install/actions/workflows/ci.yml/badge.svg)](https://github.com/MiRHaDi/nessus-safe-install/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License: MIT and Apache-2.0](https://img.shields.io/badge/license-MIT%20%2B%20Apache--2.0-green)](docs/COMMUNITY.md#licenses)
 
 **Install official Tenable Nessus packages and perform guarded native plugin updates while retaining recoverable data.**
 
 [فارسی](README.fa.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Engine upgrades](docs/UPGRADES.md) · [Recovery](docs/RECOVERY.md) · [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Security](SECURITY.md)
 
-An independent, early-stage operations tool for native Debian/Ubuntu hosts. It does not distribute Nessus, plugins, licenses or activation codes. A valid Tenable entitlement and working registration remain necessary for online updates. This project cannot turn an invalid registration into a valid one or guarantee that a vendor feed will be available.
+An independent, early-stage operations tool for native Debian/Ubuntu hosts. It does not distribute Tenable binaries, vendor plugin feeds, licenses or activation codes. It includes eight reviewed, openly licensed community checks, separate from the vendor library. A valid Tenable entitlement and working registration remain necessary for vendor online updates. This project cannot turn an invalid registration into a valid one or guarantee that a vendor feed will be available.
 
 ## Why this exists
 
@@ -26,6 +26,8 @@ This tool delegates installation and plugin processing to the vendor. It checks 
 | `backup` | Stops the service during exclusive maintenance; creates an AES-256 encrypted full-tree snapshot and verifies actual decryption before resuming. |
 | `update` | Uses `nessuscli update --plugins-only`, or a supplied licensed local archive. Requires a healthy baseline, verified snapshot, stable post-update API and unchanged owner data. |
 | `update --verify-restart` | Additionally restarts the service and verifies that the same plugin library and owner data remain available. |
+| `update --with-community` | Also fetches the pinned sources from two community repositories, checks hashes and native NASL syntax, then activates the reviewed supplemental bundle only after vendor acceptance. |
+| `community check / status / sync / rollback` | Detects upstream changes, verifies installed supplemental files, syncs a reviewed version or selects a retained previous version. Does not modify the vendor index or feed. |
 | `upgrade` | Runs the native all-components updater and verifies an exact expected engine version, owner data and restart. Requires valid registration and independent host recovery. |
 | `rollback` | Restores a verified same-installation snapshot. Keeps the displaced current tree in a separate directory; never merges over or deletes it. |
 
@@ -102,6 +104,20 @@ Expect a large library to take several minutes to initialize. The native update 
 
 An unchanged plugin-set identifier is reported as `already-current-or-same-set`, not a newly delivered plugin set. Tenable's own automatic update configuration is left intact.
 
+### Vendor and community updates together
+
+```bash
+python3 -m nessus_safe community check
+sudo python3 -m nessus_safe update \
+  --url https://scanner.example.org:8834 --ca-file /secure-ca/nessus-ca.pem \
+  --maintenance-window --verify-restart --with-community
+sudo python3 -m nessus_safe community status
+```
+
+The reviewed sources are [Schuberg Philis' header checks](https://github.com/schubergphilis/custom-nessus-plugins) and [Riccardo Melioli's NASL examples](https://github.com/richkmeli/NASL-Plugins). Eight bounded adaptations/companion checks cover HTTP configuration and TCP reachability. Original attribution and licenses are retained. New upstream commits are reported as **review required**, never automatically executed as root. Repository additions do not imply a complete vulnerability database.
+
+The supplemental library lives outside `/opt/nessus`, under `/var/lib/nessus-safe-install/community/versions/`. It is **not loaded into the Nessus UI catalog**, does not increase the vendor API plugin count, and does not automatically launch target scans. Read [community installation, execution boundaries and rollback](docs/COMMUNITY.md). A combined update requires working vendor registration; the independent `community sync --offline` command can use the bundled reviewed community material without changing that registration.
+
 ### Licensed offline archive
 
 Use a locally supplied archive obtained for your authorized scanner. Newer vendor workflows may also require a detached signature; supply both files when required:
@@ -147,4 +163,4 @@ No Python runtime dependencies. The Linux suite includes actual GPG encrypt/decr
 - [Native local-archive updates](https://docs.tenable.com/nessus/command-line-reference/Content/UpdateASpecificPluginArchive.htm)
 - [Vendor backup scope](https://docs.tenable.com/nessus/Content/BackUpNessus.htm) — the vendor backup does not include scan results; this project's full-tree snapshot is a different, same-host mechanism.
 
-MIT applies only to this project's original code and documentation. Tenable Nessus and its plugins remain subject to Tenable's terms. This project is not affiliated with or endorsed by Tenable.
+MIT applies to the original Python tooling and documentation. Community NASL files retain their Apache-2.0/MIT notices and upstream license copies; see [licenses](docs/COMMUNITY.md#licenses). Tenable Nessus and its plugins remain subject to Tenable's terms. This project is not affiliated with or endorsed by Tenable.

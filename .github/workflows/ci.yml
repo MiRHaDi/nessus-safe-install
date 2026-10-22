@@ -21,6 +21,21 @@ jobs:
           python -m pip install --no-deps .
           nessus-safe --version
           python -m nessus_safe --help
+          python -m nessus_safe community --help
+          python -m pip wheel --no-deps --wheel-dir "$RUNNER_TEMP/community-wheel" .
+          python - <<'PY'
+          import os, json, zipfile, hashlib
+          from pathlib import Path
+          wheel = next((Path(os.environ['RUNNER_TEMP'])/'community-wheel').glob('*.whl'))
+          with zipfile.ZipFile(wheel) as z:
+              prefix='nessus_safe/data/community/'
+              manifest=json.loads(z.read(prefix+'manifest.json'))
+              assert len(manifest['checks'])==8
+              for row in manifest['files']:
+                  data=z.read(prefix+row['path'])
+                  assert len(data)==row['bytes'] and hashlib.sha256(data).hexdigest()==row['sha256']
+              assert len([n for n in z.namelist() if '.dist-info/licenses/' in n and n.endswith('LICENSE')])==3
+          PY
       - name: Unit and actual GPG/atomic-restore tests
         env:
           PYTHONWARNINGS: error::ResourceWarning

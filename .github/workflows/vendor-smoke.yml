@@ -78,3 +78,6 @@ jobs:
           sudo systemctl is-active --quiet nessusd.service
           test "$(sudo cat /opt/nessus/var/nessus/nessus-safe-test-sentinel)" = synthetic-preservation-test
           sudo "$(command -v python)" -c 'import sys; from nessus_safe.core import engine_version; v=engine_version(None); print(v); assert v==sys.argv[1]' "$EXPECTED_VERSION"
+      - name: Native community syntax, classifications and explicit scope guards
+        run: |
+          sudo env NESSUS_NATIVE_COMMUNITY_TESTS=1 "$(command -v python)" -m unittest discover -s tests -p test_native_community.py -v

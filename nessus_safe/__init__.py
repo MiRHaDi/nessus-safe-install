@@ -1,3 +1,3 @@
-"""Independent operations tooling; no Tenable software or plugins included."""
+"""Independent operations tooling with licensed community NASL; no vendor feed."""
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-10-22
+
+- Add two reviewed, commit/SHA-256 locked community NASL sources, original licenses and eight bounded adaptations/companion checks. Require exact explicit target authority; include no deployment-specific targets or private evidence.
+- Add `community check/status/sync/rollback` and `update --with-community`. New upstream commits require review; only locked local adaptations are eligible for native no-target validation and supplemental activation.
+- Keep the supplemental version store outside the vendor installation, retain all previous versions and atomic pointer transition receipts, and preserve idle, identity and single-writer gates. Do not load custom checks into the UI index or edit feed/registration state.
+- Stage and validate community data before vendor maintenance; activate only after native update acceptance. Report partial outcomes explicitly instead of hiding a completed vendor update when supplemental activation fails.
+
 ## 0.2.3 — 2026-10-22
 
 - Let read-only `doctor` observe the specific native feed-download failure state when login, engine and database are available. Keep strict ready-state checks for every maintenance snapshot.

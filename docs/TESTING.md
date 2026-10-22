@@ -1,6 +1,29 @@
 # Validation and release status
 
-Version 0.2.3 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+Version 0.3.0 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+
+## Community source integration (0.3.0)
+
+The community tests exercise actual temporary file staging, hash validation,
+version retention, pointer failure, idempotent sync and explicit supplemental
+rollback. Orchestration tests also prove that failed registration prevents a
+combined update, a vendor failure prevents supplemental activation, and a
+supplemental activation failure does not hide a completed vendor update.
+Upstream commit changes are review-only; tests refuse changed payloads,
+traversal, duplicate IDs, redirects, symlinks, active work and state changes.
+
+The Linux CI builds a wheel and verifies every locked resource hash plus all
+three license files. The separate official-package smoke workflow now also
+opts into `tests/test_native_community.py`: eight native syntax/load checks,
+positive/negative fixed-response cases, exact authority/IP refusal and actual
+loopback TCP, HEAD and GET fallback. These tests are skipped in ordinary CI
+without a native product installation. Opting in requires a disposable Linux
+host; absence or failure of its native interpreter is a failure, not a skip.
+
+Native fixture success does not prove a licensed online vendor update or load
+the supplemental checks into the Nessus UI. Earlier deployment-specific NASL
+results are not acceptance of this generic-scope public revision. Inspect the
+workflow result for the exact commit being used.
 
 ## Version 0.2.3 validation
 

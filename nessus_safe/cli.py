@@ -16,6 +16,7 @@ import uuid
 from . import __version__
 from . import core as c
 from . import versions
+from . import community
 
 
 def secret(fd, prompt):
@@ -99,6 +100,14 @@ def parser():
     install.add_argument("--apply", action="store_true")
     release = sub.add_parser("versions", help="Read official latest-release metadata; no root or installation changes")
     release.add_argument("--current-version")
+    supplemental = sub.add_parser("community", help="Reviewed community NASL sources and separate versioned supplemental library")
+    supplemental.add_argument("action", choices=("check", "status", "sync", "rollback"))
+    supplemental.add_argument("--url", help="Local scanner HTTPS origin; required for sync/rollback")
+    supplemental.add_argument("--ca-file", type=Path)
+    supplemental.add_argument("--auth-fd", type=int)
+    supplemental.add_argument("--maintenance-window", action="store_true")
+    supplemental.add_argument("--offline", action="store_true", help="Sync bundled reviewed sources without network access")
+    supplemental.add_argument("--bundle-sha256", help="Previously installed supplemental version for rollback")
     for name in ("doctor", "backup", "update", "upgrade", "rollback"):
         s = sub.add_parser(name)
         s.add_argument("--url", required=True, help="HTTPS origin with a trusted matching server certificate")
@@ -110,6 +119,7 @@ def parser():
                            help="Operator has reserved exclusive maintenance, including other users' scans")
             s.add_argument("--passphrase-fd", type=int)
         if name == "update":
+            s.add_argument("--with-community", action="store_true", help="Also sync the two reviewed community sources; keep vendor and supplemental results separate")
             s.add_argument("--archive", type=Path, help="Licensed local plugin archive; otherwise native online update")
             s.add_argument("--sha256")
             s.add_argument("--signature", type=Path)
@@ -127,6 +137,16 @@ def parser():
 def execute(args, fd):
     if args.command == "install":
         return fresh_install(args, fd)
+    if args.command == "community":
+        c.require(not args.offline or args.action == "sync", "COMMUNITY_OFFLINE_REQUIRES_SYNC")
+        c.require(not args.bundle_sha256 or args.action == "rollback", "COMMUNITY_BUNDLE_ARGUMENT_REQUIRES_ROLLBACK")
+        if args.action == "status":
+            return community.status()
+        c.require(args.action in ("sync", "rollback") and args.url and args.maintenance_window,
+                  "COMMUNITY_LOCAL_API_AND_EXCLUSIVE_MAINTENANCE_REQUIRED")
+        if args.action == "rollback":
+            c.require(args.bundle_sha256, "COMMUNITY_BUNDLE_SHA256_REQUIRED")
+        return community.sync(client(args), fd, offline=args.offline, rollback=args.bundle_sha256)
     c.require(60 <= args.wait_seconds <= 86400, "WAIT_SECONDS_REQUIRES_60_TO_86400")
     api = client(args)
     if args.command == "doctor":
@@ -222,10 +242,19 @@ def execute(args, fd):
         c.require(not args.signature and not args.sha256 and not args.signature_sha256, "ARCHIVE_ARGUMENTS_REQUIRE_ARCHIVE")
         code, raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
         c.require(c.registration_result(code, raw)["eligible"], "REGISTRATION_CHECK_FAILED_NO_UPDATE_STARTED")
+    candidate, native_validation = None, None
+    if getattr(args, "with_community", False):
+        # Download and validate the reviewed candidate BEFORE touching the vendor
+        # installation. Never activate it if the native update/acceptance fails.
+        before_community = api.snapshot()
+        candidate = community.prepare()
+        native_validation = community.validate_native(candidate["bundleSha256"], fd)
+        c.require(api.snapshot() == before_community, "COMMUNITY_OWNER_OR_SCANNER_STATE_CHANGED")
     c.write_json(c.STATE / ("intent-" + uuid.uuid4().hex + ".json"), {"at": time.time(), "command": args.command,
         "encryptedSnapshot": str(directory), "expectedEngineVersion": getattr(args, "expected_version", None),
         "engineVersionBefore": version_before,
-        "externalRecoveryConfirmed": getattr(args, "external_recovery_confirmed", False)})
+        "externalRecoveryConfirmed": getattr(args, "external_recovery_confirmed", False),
+        "communityCandidate": candidate["bundleSha256"] if candidate else None})
     try:
         result = c.run_update(api, backup, command, fd, args.wait_seconds, args.command == "upgrade" or args.verify_restart)
         if args.command == "upgrade":
@@ -243,15 +272,29 @@ def execute(args, fd):
                               externalRecoveryRequiredIfBinaryChanged=args.command == "upgrade")
         raise
     delivery = "engine-upgraded" if args.command == "upgrade" else "new-plugin-set" if result["pluginSetChanged"] else "already-current-or-same-set"
+    if candidate:
+        try:
+            c.require(api.snapshot() == result["after"], "COMMUNITY_OWNER_OR_SCANNER_STATE_CHANGED")
+            result["community"] = community.activate(candidate, native_validation)
+        except (c.Refused, OSError, ValueError, KeyError) as error:
+            raise c.Refused("VENDOR_UPDATE_COMPLETED_COMMUNITY_REQUIRES_REVIEW", evidence={
+                "vendorUpdateCompleted": True, "vendorResult": result, "encryptedSnapshot": str(directory),
+                "communityCandidate": candidate["bundleSha256"],
+                "cause": str(error) if isinstance(error, c.Refused) else type(error).__name__,
+                "recovery": "Inspect community status and its transition receipt. Retain both versions; do not replay the vendor update to repair a supplemental activation."}) from None
     return {**result, "encryptedSnapshot": str(directory), "delivery": delivery}
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    if args.command == "versions":
+    if args.command == "versions" or (args.command == "community" and args.action == "check"):
         try:
-            result = versions.fetch_catalog()
-            if args.current_version:
+            if args.command == "community":
+                c.require(not args.offline and not args.bundle_sha256, "COMMUNITY_CHECK_ARGUMENTS_INVALID")
+                result = community.check_sources()
+            else:
+                result = versions.fetch_catalog()
+            if args.command == "versions" and args.current_version:
                 result["upgradeAvailable"] = versions.version_tuple(result["latestVersion"]) > versions.version_tuple(args.current_version)
             print(json.dumps(result, indent=2)); return 0
         except (c.Refused, OSError, ValueError, KeyError) as e:

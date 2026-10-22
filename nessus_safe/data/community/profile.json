@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "mode": "native NASL supplemental runner; not a Nessus UI policy",
+  "scope": "No implicit target authority. Explicit opt-in, exact AEGIS/AuthorizedHost and ExpectedIP required.",
+  "ports": [
+    80,
+    443
+  ],
+  "method": "HEAD with bounded GET fallback on 405 or 501",
+  "path": "/",
+  "followRedirects": false,
+  "authentication": false,
+  "concurrency": 2,
+  "maxNativeRuntimeSeconds": 20,
+  "checks": [
+    {
+      "pluginId": 1337001,
+      "file": "aegis_hsts.nasl",
+      "kind": "hsts",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337002,
+      "file": "aegis_nosniff.nasl",
+      "kind": "nosniff",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337003,
+      "file": "aegis_framing.nasl",
+      "kind": "framing",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337004,
+      "file": "aegis_legacy_xss_inventory.nasl",
+      "kind": "legacy_xss",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337005,
+      "file": "aegis_tcp_connect.nasl",
+      "kind": "tcp",
+      "origin": "richkmeli/NASL-Plugins"
+    },
+    {
+      "pluginId": 1337006,
+      "file": "aegis_csp.nasl",
+      "kind": "csp",
+      "origin": "original companion check"
+    },
+    {
+      "pluginId": 1337007,
+      "file": "aegis_referrer.nasl",
+      "kind": "referrer",
+      "origin": "original companion check"
+    },
+    {
+      "pluginId": 1337008,
+      "file": "aegis_cookie_flags.nasl",
+      "kind": "cookies",
+      "origin": "original companion check"
+    }
+  ]
+}

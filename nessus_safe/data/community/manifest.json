@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "bundleVersion": "20261022-public-1",
+  "mode": "supplemental-native-nasl-not-vendor-index",
+  "sources": [
+    {
+      "repository": "schubergphilis/custom-nessus-plugins",
+      "commit": "63c53819fa8cbfafaf1418f2d5d70294d2c53b67",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "http_Strict_Transport_Security_Header_sbp.nasl",
+          "sha256": "abb149d7bb5107c84ffcec3243a50a7f19813cc3e09cf3dc56b1895d7250f0b0"
+        },
+        {
+          "path": "http_X_Content_Type_Nosniff_sbp.nasl",
+          "sha256": "fa32bc4fbdeea9881119886a74887dc530ac3b942ff827ad75cf844e87ad2745"
+        },
+        {
+          "path": "http_X_Frame_Options_Header_Deny_sbp.nasl",
+          "sha256": "6d6c8616be7eb7aac326cef5c7411e757cb5174143b32c8adde9939cb85d52a1"
+        },
+        {
+          "path": "http_X_XSS_Protection_sbp.nasl",
+          "sha256": "ccf07f9e69cd585eb3c40c451c9ee2835c8962f772ef50dc60681eb2a503ad29"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "cb5e8e7e5f4a3988e1063c142c60dc2df75605f4c46515e776e3aca6df976e14"
+        }
+      ]
+    },
+    {
+      "repository": "richkmeli/NASL-Plugins",
+      "commit": "8d966653b042279190fc8920af33cb799fe62dbc",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "f988395d3c3c28cf96415354d3eca8f811b95cbb4f6d18cf9d218a47e4315a21"
+        },
+        {
+          "path": "Plugins/Port_Checker.nasl",
+          "sha256": "cfc41c61165a914973c824481ec8f804436ac10d3f875a1a9052aad0cc8af324"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "pluginId": 1337001,
+      "file": "aegis_hsts.nasl",
+      "kind": "hsts",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337002,
+      "file": "aegis_nosniff.nasl",
+      "kind": "nosniff",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337003,
+      "file": "aegis_framing.nasl",
+      "kind": "framing",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337004,
+      "file": "aegis_legacy_xss_inventory.nasl",
+      "kind": "legacy_xss",
+      "origin": "schubergphilis/custom-nessus-plugins"
+    },
+    {
+      "pluginId": 1337005,
+      "file": "aegis_tcp_connect.nasl",
+      "kind": "tcp",
+      "origin": "richkmeli/NASL-Plugins"
+    },
+    {
+      "pluginId": 1337006,
+      "file": "aegis_csp.nasl",
+      "kind": "csp",
+      "origin": "original companion check"
+    },
+    {
+      "pluginId": 1337007,
+      "file": "aegis_referrer.nasl",
+      "kind": "referrer",
+      "origin": "original companion check"
+    },
+    {
+      "pluginId": 1337008,
+      "file": "aegis_cookie_flags.nasl",
+      "kind": "cookies",
+      "origin": "original companion check"
+    }
+  ],
+  "files": [
+    {
+      "path": "plugins/aegis_cookie_flags.nasl",
+      "bytes": 1421,
+      "sha256": "c56b836b90907bbd7bc1752595a7e1076b0710daf74701e21b6a2bc68a333c19"
+    },
+    {
+      "path": "plugins/aegis_csp.nasl",
+      "bytes": 1424,
+      "sha256": "e6b7835c64419c91d452e7b8f7893ba630eff377aad238f8a219a7167a313e7e"
+    },
+    {
+      "path": "plugins/aegis_framing.nasl",
+      "bytes": 2037,
+      "sha256": "a5e2f0ba2ab2a742bf1f02bdb1ac4d5a3b8235a1bdff4ac9c20fa35185f112ad"
+    },
+    {
+      "path": "plugins/aegis_hsts.nasl",
+      "bytes": 2023,
+      "sha256": "17a731cf19444db87dc26980d14c7cfa420b68155d2975e715ca1cdab49065a8"
+    },
+    {
+      "path": "plugins/aegis_http_common.inc",
+      "bytes": 7956,
+      "sha256": "e2a2716feaed8b4bedafb1cb6a659e0c90557bbbb97899bbbbbc04a89e783b54"
+    },
+    {
+      "path": "plugins/aegis_legacy_xss_inventory.nasl",
+      "bytes": 2051,
+      "sha256": "76d45f2094eaf56bd3c0cf5a27b5d2b22e487daff9ec986e7f2c0a739ea63a13"
+    },
+    {
+      "path": "plugins/aegis_nosniff.nasl",
+      "bytes": 2035,
+      "sha256": "cfca6131ded194fdffbb0883ebc7d116fde1b0d57993be2ad25e60a445299849"
+    },
+    {
+      "path": "plugins/aegis_referrer.nasl",
+      "bytes": 1421,
+      "sha256": "5cd03b8825b1dad39940e9bc9a00f6f758fa26de29d89eb09d060ae1d1d05c8b"
+    },
+    {
+      "path": "plugins/aegis_tcp_connect.nasl",
+      "bytes": 1438,
+      "sha256": "58cb84cdc7f9f22e801b1df48c38605c5d5a12b22fbb509dd828233d092b3be0"
+    },
+    {
+      "path": "profile.json",
+      "bytes": 1643,
+      "sha256": "8beb71604670e01ffc456513305d8e2f72b7a590eb3a467c25ded9d995588c07"
+    },
+    {
+      "path": "upstream/richkmeli__NASL-Plugins/LICENSE",
+      "bytes": 1073,
+      "sha256": "f988395d3c3c28cf96415354d3eca8f811b95cbb4f6d18cf9d218a47e4315a21"
+    },
+    {
+      "path": "upstream/richkmeli__NASL-Plugins/Plugins/Port_Checker.nasl",
+      "bytes": 606,
+      "sha256": "cfc41c61165a914973c824481ec8f804436ac10d3f875a1a9052aad0cc8af324"
+    },
+    {
+      "path": "upstream/schubergphilis__custom-nessus-plugins/http_Strict_Transport_Security_Header_sbp.nasl",
+      "bytes": 3325,
+      "sha256": "abb149d7bb5107c84ffcec3243a50a7f19813cc3e09cf3dc56b1895d7250f0b0"
+    },
+    {
+      "path": "upstream/schubergphilis__custom-nessus-plugins/http_X_Content_Type_Nosniff_sbp.nasl",
+      "bytes": 2899,
+      "sha256": "fa32bc4fbdeea9881119886a74887dc530ac3b942ff827ad75cf844e87ad2745"
+    },
+    {
+      "path": "upstream/schubergphilis__custom-nessus-plugins/http_X_Frame_Options_Header_Deny_sbp.nasl",
+      "bytes": 2940,
+      "sha256": "6d6c8616be7eb7aac326cef5c7411e757cb5174143b32c8adde9939cb85d52a1"
+    },
+    {
+      "path": "upstream/schubergphilis__custom-nessus-plugins/http_X_XSS_Protection_sbp.nasl",
+      "bytes": 3100,
+      "sha256": "ccf07f9e69cd585eb3c40c451c9ee2835c8962f772ef50dc60681eb2a503ad29"
+    },
+    {
+      "path": "upstream/schubergphilis__custom-nessus-plugins/LICENSE",
+      "bytes": 11325,
+      "sha256": "cb5e8e7e5f4a3988e1063c142c60dc2df75605f4c46515e776e3aca6df976e14"
+    }
+  ]
+}

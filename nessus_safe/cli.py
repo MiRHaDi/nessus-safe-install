@@ -131,11 +131,13 @@ def execute(args, fd):
     api = client(args)
     if args.command == "doctor":
         code, raw = c.native([c.CLI, "fetch", "--check"], lock_fd=fd, capture=True)
-        result = {"api": api.observe(), "nativeRegistration": c.registration_result(code, raw), "engineVersion": c.engine_version(fd)}
+        result = {"api": api.observe(allow_feed_failure=True), "nativeRegistration": c.registration_result(code, raw), "engineVersion": c.engine_version(fd)}
         observed = result["api"]
         result["localReuse"] = c.reuse_guidance(observed, result["nativeRegistration"])
-        result["healthyForOnlineUpdates"] = bool(result["nativeRegistration"]["eligible"] and observed["plugins"] > 0
+        result["healthyForOnlineUpdates"] = bool(observed.get("readiness", {}).get("maintenanceReady", True)
+            and result["nativeRegistration"]["eligible"] and observed["plugins"] > 0
             and observed["families"] > 0 and observed["pluginSet"] and observed["pluginSet"] == observed["loadedPluginSet"])
+        result["targetScanAcceptanceProven"] = False
         return result
     c.require(c.ROOT.is_dir() and not c.ROOT.is_symlink() and not os.path.ismount(c.ROOT), "NATIVE_NON_MOUNTED_INSTALLATION_REQUIRED")
     passphrase = secret(args.passphrase_fd, "Backup passphrase (at least 16 bytes; retain securely): ")

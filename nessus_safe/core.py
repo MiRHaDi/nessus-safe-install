@@ -177,9 +177,20 @@ class API:
             finally:
                 self.token = None
 
-    def observe(self):
+    def observe(self, *, allow_feed_failure=False):
         """Read state even during scans; this observation cannot authorize writes."""
-        require(self.call("/server/status").get("status") == "ready", "NESSUS_NOT_READY")
+        status = self.call("/server/status")
+        ready = status.get("status") == "ready"
+        details = status.get("detailed_status") or {}
+        feed_failure = (status.get("status") == "download-failed"
+                        and details.get("login_status") == "allow"
+                        and isinstance(details.get("engine_status"), dict)
+                        and details["engine_status"].get("status") == "ready"
+                        and isinstance(details.get("db_status"), dict)
+                        and details["db_status"].get("status") == "ready"
+                        and isinstance(details.get("feed_status"), dict)
+                        and details["feed_status"].get("status") in ("downloading-failed", "download-failed")) if isinstance(details, dict) else False
+        require(ready or (allow_feed_failure and feed_failure), "NESSUS_NOT_READY")
         with self.session():
             users = self.call("/users").get("users") or []
             scans = self.call("/scans").get("scans") or []
@@ -190,11 +201,15 @@ class API:
             require(users, "ADMINISTRATOR_USERS_READBACK_REQUIRED")
             def hash_rows(rows):
                 return hashlib.sha256(canonical(sorted(rows, key=canonical))).hexdigest()
-            return {"users": len(users), "identities": hash_rows([(u["id"], u["username"], u.get("permissions")) for u in users]),
+            result = {"users": len(users), "identities": hash_rows([(u["id"], u["username"], u.get("permissions")) for u in users]),
                     "scans": len(scans), "scanMetadata": hash_rows(scans), "policies": len(policies), "policyMetadata": hash_rows(policies),
                     "families": len(families), "plugins": sum(f.get("count", 0) for f in families if isinstance(f.get("count"), int)),
                     "pluginSet": props.get("plugin_set"), "loadedPluginSet": props.get("loaded_plugin_set"),
                     "activeOrUnknownScans": nonterminal}
+            if allow_feed_failure:
+                # Boolean evidence only: native messages may contain private data.
+                result["readiness"] = {"maintenanceReady": ready, "feedFailureObserved": feed_failure}
+            return result
 
     def snapshot(self):
         observed = self.observe()
@@ -240,7 +255,9 @@ def reuse_guidance(observed, registration):
     return {"compiledLibraryLoaded": loaded,
             "libraryAction": "keep-existing-compiled-library" if loaded else "review-same-installation-recovery",
             "registrationAction": "native-online-update-eligible" if registration["eligible"] else "valid-registration-required",
-            "mutationGate": "active-or-unknown-scans" if observed["activeOrUnknownScans"] else "exclusive-maintenance-required",
+            "mutationGate": ("active-or-unknown-scans" if observed["activeOrUnknownScans"] else
+                             "native-not-ready" if not observed.get("readiness", {}).get("maintenanceReady", True) else
+                             "exclusive-maintenance-required"),
             "compiledFilesRepairRegistration": False, "automaticCacheTransplantSupported": False,
             "newPluginDownloadProven": False}
 

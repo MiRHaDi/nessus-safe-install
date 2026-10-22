@@ -6,7 +6,7 @@
 
 **Install official Tenable Nessus packages and perform guarded native plugin updates while retaining recoverable data.**
 
-[فارسی](README.fa.md) · [Engine upgrades](docs/UPGRADES.md) · [Recovery](docs/RECOVERY.md) · [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Security](SECURITY.md)
+[فارسی](README.fa.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Engine upgrades](docs/UPGRADES.md) · [Recovery](docs/RECOVERY.md) · [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Security](SECURITY.md)
 
 An independent, early-stage operations tool for native Debian/Ubuntu hosts. It does not distribute Nessus, plugins, licenses or activation codes. A valid Tenable entitlement and working registration remain necessary for online updates. This project cannot turn an invalid registration into a valid one or guarantee that a vendor feed will be available.
 
@@ -21,7 +21,7 @@ This tool delegates installation and plugin processing to the vendor. It checks 
 | Operation | Behavior |
 | --- | --- |
 | `install` | Verifies a supplied official `.deb` against an independently trusted SHA-256, checks package name/architecture and refuses an existing installation. Prints a plan unless `--apply` is supplied. |
-| `doctor` | Checks the trusted HTTPS API and native registration. Returns an error for a broken registration instead of claiming online updates work. |
+| `doctor` | Checks the trusted HTTPS API, loaded library and native registration. Can diagnose a feed-download failure when login, engine and database remain available. Never treats that degraded state as update readiness or a passed target scan. |
 | `versions` | Reads the current official Tenable release catalog and published SHA-256 values. Does not require root or install code. |
 | `backup` | Stops the service during exclusive maintenance; creates an AES-256 encrypted full-tree snapshot and verifies actual decryption before resuming. |
 | `update` | Uses `nessuscli update --plugins-only`, or a supplied licensed local archive. Requires a healthy baseline, verified snapshot, stable post-update API and unchanged owner data. |
@@ -77,6 +77,10 @@ sudo python3 -m nessus_safe doctor \
 The tool prompts for the administrator username and hides the password. Use a hostname that matches the certificate. There is no `--insecure` option. A self-signed certificate must be provisioned/trusted correctly; bypassing verification is not a repair.
 
 `doctor` exits **3** when online-update eligibility is not healthy, **2** for a refused/failed operation and **0** for successful verification. A failed preference-file validation needs legitimate same-installation registration recovery or Tenable support. The tool does not reset it automatically.
+
+From **0.2.3**, a native `download-failed` status with login allowed and engine/database ready is observable by `doctor`. It reports `api.readiness.feedFailureObserved=true`, `api.readiness.maintenanceReady=false`, and `healthyForOnlineUpdates=false`; it retains loaded-library evidence and exits 3. Other unready states still refuse. HTTP errors and certificate validation are not relaxed. Backup, update, upgrade and rollback continue to require the normal ready state and idle snapshot.
+
+`targetScanAcceptanceProven` is always false: this diagnostic does not run or accept target scans. A loaded plugin inventory, a successful native compile, a responding HTTPS endpoint and a completed model turn each establish different things. Follow the [scan acceptance and failure guide](docs/TROUBLESHOOTING.md) before calling a real assessment complete.
 
 ### 3. Update with recoverable data
 

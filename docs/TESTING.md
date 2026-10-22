@@ -1,6 +1,16 @@
 # Validation and release status
 
-Version 0.2.2 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+Version 0.2.3 is a public alpha. The distinction between tested code and a proven licensed vendor deployment is deliberate.
+
+## Version 0.2.3 validation
+
+On 2026-10-22, the exact candidate source and tests passed **all 59 tests on Linux/Python 3.12.3**, in an unprivileged temporary fixture workspace. GPG encryption/decryption, trusted/untrusted TLS and atomic-rename recovery executed rather than being skipped. The corresponding Windows/Python 3.12 run passed 52 tests and skipped seven Linux-only cases. Both runs used `-W error::ResourceWarning` (or the equivalent `PYTHONWARNINGS` setting).
+
+Seven new tests reproduce the feed-failure diagnostic, prevent raw native messages/owner names from appearing in results, refuse incomplete or malformed readiness details before login, preserve active/unknown scan gates, refuse the same degraded state in maintenance snapshots, retain the healthy snapshot shape, and ensure HTTP503 is still an HTTP failure. The CLI integration case uses the real observation path with a fixture API and proves that even a positive registration check cannot turn a feed outage into healthy online updates or invoke a service mutation.
+
+The installed shared scanner was independently observed with a ready engine/database, failed feed download, matching installed/loaded plugin-set IDs and retained safe narrow-port settings. Existing active processing was left alone. This is observational motivation, not certification of this tool against that container: the installer still supports native systemd deployments only. The observed IP-tracking refusal and real scan acceptance remain unresolved. No production assessment export, internal endpoint, native log, activation code or credential is included in the public test suite.
+
+Reproduce the suite with `python3 -W error::ResourceWarning -m unittest discover -s tests -v`. GitHub Actions repeats it on Python 3.12 and 3.13 for each pushed revision; inspect the exact revision's workflow result separately. See [troubleshooting and acceptance criteria](TROUBLESHOOTING.md).
 
 ## Version 0.2.2 review
 

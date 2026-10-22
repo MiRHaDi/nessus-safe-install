@@ -16,6 +16,8 @@ From version 0.2.2, `localReuse.libraryAction` is `keep-existing-compiled-librar
 
 This decision reports existing state; it does not start a transfer, restart, compilation, update, scan, or registration change. Do not infer actual new delivery from a working local library.
 
+Version 0.2.3 also allows `doctor` to diagnose the specific native `download-failed` state when detailed status allows login and says the engine and database are ready. A failed feed component is required; arbitrary startup failures do not qualify. The diagnostic reports only readiness booleans, not raw native messages. A loaded library can still be retained, but `healthyForOnlineUpdates` stays false and the idle mutation gate is `native-not-ready`. Active/unknown scans take precedence. `API.snapshot()` remains strict and cannot use this exception to authorize maintenance. See [troubleshooting](TROUBLESHOOTING.md) for scan and registration failures.
+
 ## When the library is incomplete
 
 The tool reports `review-same-installation-recovery`. The supported routes are an explicitly selected, verified same-installation encrypted snapshot through `rollback`, or an authorized local vendor archive through native `update --archive` (and its signature when required). These routes need maintenance, preserve existing data for recovery, and do not require downloading the same archive again. Review the [recovery limits](RECOVERY.md) before restoring over any work created since the snapshot.
